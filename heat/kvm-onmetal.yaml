@@ -1,0 +1,70 @@
+heat_template_version: 2014-10-16
+
+description: > 
+  Single OnMetal linux server configured with persistent CBS and KVM
+
+parameter_groups:
+  - label: Volume Settings
+    parameters:
+      - volume_count
+      - volume_size
+      - volume_type
+
+parameters:
+  volume_count:
+    label: Volume Count
+    type: number
+    description: Number of volumes
+    default: 4 
+    constraints:
+      - range: {min: 1, max: 10}
+
+  volume_size:
+    label: Volume Size
+    type: number
+    description: Size of volume to attach to instance
+    default: 75 
+    constraints:
+      - range: {min: 75, max: 1024}
+
+  volume_type:
+    label: Volume Type (SSD, SATA)
+    type: string
+    description: Type of volume, only two SSD or SATA
+    default: SSD
+    constraints:
+      - allowed_values:
+        - SSD
+        - SATA
+
+resources:
+  kvm_volume_attachment_group:
+    type: OS::Heat::ResourceGroup
+    depends_on: kvm_node
+    properties:
+      count: { get_param: volume_count } 
+      resource_def:
+        type: volume-with-attachment.yaml
+        properties:
+          instance_id: { get_resource: kvm_node }
+          volume_size: { get_param: volume_size }
+          volume_type: { get_param: volume_type }
+
+  kvm_node:
+    type: OS::Nova::Server
+    properties:
+      flavor: OnMetal Compute v1
+      image: OnMetal - Fedora 22
+      key_name: rax_mac
+      user_data: |
+        #!/bin/bash
+
+        dnf -y upgrade
+        dnf -y install iscsi-initiator-utils mdadm xfsprogs
+        systemctl enable iscsid
+        systemctl start iscsid        
+
+outputs:
+  kvm_volume_debug:
+    description: "debug info"
+    value: { get_resource: kvm_volume_attachment_group } 

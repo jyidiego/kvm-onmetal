@@ -1,0 +1,36 @@
+heat_template_version: 2014-10-16
+
+parameters:
+  volume_size:
+    type: number
+    description: Size of volume to attach to instance
+    default: 75 
+    constraints:
+      - range: {min: 75, max: 1024}
+
+  volume_type:
+    type: string
+    description: Type of volume
+    default: SSD
+    constraints:
+      - allowed_values:
+        - SSD
+        - SATA
+
+  instance_id:
+    type: string
+    description: Server to attach volume to
+
+resources:
+  volume:
+    type: OS::Cinder::Volume
+    properties:
+      description: Volume for stack
+      size: { get_param: volume_size }
+      volume_type: { get_param: volume_type } 
+
+  volume_attachment:
+    type: OS::Cinder::VolumeAttachment
+    properties:
+      volume_id: { get_resource: volume }
+      instance_uuid: { get_param: instance_id}
